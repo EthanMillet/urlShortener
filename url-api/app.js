@@ -2,14 +2,23 @@ require('dotenv-safe').config();
 const express = require('express');
 const cors = require('cors');
 const { Sequelize } = require('sequelize');
-const config = require('./config/config.json');
 const path = require('path')
-
 
 const urlRouter = require('./routes/url');
 
 const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env];
+
+// Handle production environment without config.json
+let dbConfig;
+if (env === 'production') {
+  dbConfig = {
+    use_env_variable: 'JAWSDB_URL',
+    dialect: 'mysql'
+  };
+} else {
+  const config = require('./config/config.json');
+  dbConfig = config[env];
+}
 
 let sequelize;
 
