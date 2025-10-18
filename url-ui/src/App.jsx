@@ -5,6 +5,7 @@ function App() {
   const [inputHtml, setInputHtml] = useState('')
   const [outputHtml, setOutputHtml] = useState('')
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     // Check for saved theme preference or default to light mode
@@ -24,34 +25,74 @@ function App() {
     localStorage.setItem('theme', newTheme ? 'dark' : 'light')
   }
 
+  const extractUrls = (html) => {
+    // Regex to find all URLs in HTML (href, src, and other attributes)
+    const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+    const urls = html.match(urlRegex) || [];
+    return [...new Set(urls)]; // Remove duplicates
+  }
+
   const handleProcess = async () => {
     if (!inputHtml.trim()) return
     
+    setIsLoading(true)
+    
     try {
-      const response = await fetch('https://url-api-a0a024cbef93.herokuapp.com/api/url/process-html', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ html: inputHtml }),
-      })
+      // Extract URLs on the frontend
+      const urls = extractUrls(inputHtml)
       
-      if (response.ok) {
-        const data = await response.json()
-        setOutputHtml(data.processedHtml)
-        
-        // Show success message with stats
-        console.log(`Successfully processed HTML:`)
-        console.log(`- Found ${data.originalUrlCount} unique URLs`)
-        console.log(`- Created ${data.shortenedUrlCount} shortened URLs`)
-      } else {
-        const errorData = await response.json()
-        console.error('API Error:', errorData.error)
-        setOutputHtml(`<!-- Error processing HTML: ${errorData.error} -->\n${inputHtml}`)
+      if (urls.length === 0) {
+        setOutputHtml(inputHtml)
+        setIsLoading(false)
+        return
       }
+
+      // Create shortened URLs for each unique URL
+      const urlMappings = {}
+      const baseUrl = 'https://url-api-a0a024cbef93.herokuapp.com'
+      
+      for (const originalUrl of urls) {
+        try {
+          const response = await fetch(`${baseUrl}/api/url`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ original_url: originalUrl }),
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            urlMappings[originalUrl] = `${baseUrl}/api/url/redirect/${data.short_url}`
+          } else {
+            // Keep original URL if shortening fails
+            urlMappings[originalUrl] = originalUrl
+          }
+        } catch (error) {
+          console.error(`Error shortening URL ${originalUrl}:`, error)
+          urlMappings[originalUrl] = originalUrl
+        }
+      }
+
+      // Replace all URLs in the HTML with shortened versions
+      let processedHtml = inputHtml
+      for (const [originalUrl, shortUrl] of Object.entries(urlMappings)) {
+        const escapedOriginalUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        processedHtml = processedHtml.replace(new RegExp(escapedOriginalUrl, 'g'), shortUrl)
+      }
+
+      setOutputHtml(processedHtml)
+      
+      // Show success message with stats
+      console.log(`Successfully processed HTML:`)
+      console.log(`- Found ${urls.length} unique URLs`)
+      console.log(`- Created ${Object.keys(urlMappings).length} shortened URLs`)
+      
     } catch (error) {
       console.error('Error processing HTML:', error)
       setOutputHtml(`<!-- Error processing HTML: ${error.message} -->\n${inputHtml}`)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -80,19 +121,27 @@ function App() {
       </header>
       
       <main className="main">
+        {isLoading && (
+          <div className="loading-overlay">
+            <div className="loading-spinner">
+              <div className="spinner"></div>
+              <p>Processing URLs...</p>
+            </div>
+          </div>
+        )}
         <div className="editor-container">
           <div className="input-section">
             <div className="section-header">
               <label htmlFor="html-input" className="section-label">
                 Input HTML
               </label>
-              <button 
-                onClick={handleProcess}
-                className="process-button"
-                disabled={!inputHtml.trim()}
-              >
-                Process HTML
-              </button>
+            <button 
+              onClick={handleProcess}
+              className="process-button"
+              disabled={!inputHtml.trim() || isLoading}
+            >
+              {isLoading ? 'Processing...' : 'Process HTML'}
+            </button>
             </div>
             <textarea
               id="html-input"
