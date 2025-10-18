@@ -9,8 +9,7 @@ function App() {
     if (!inputHtml.trim()) return
     
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('/api/process', {
+      const response = await fetch('https://url-api-a0a024cbef93.herokuapp.com/api/url/process-html', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -21,11 +20,19 @@ function App() {
       if (response.ok) {
         const data = await response.json()
         setOutputHtml(data.processedHtml)
+        
+        // Show success message with stats
+        console.log(`Successfully processed HTML:`)
+        console.log(`- Found ${data.originalUrlCount} unique URLs`)
+        console.log(`- Created ${data.shortenedUrlCount} shortened URLs`)
+      } else {
+        const errorData = await response.json()
+        console.error('API Error:', errorData.error)
+        setOutputHtml(`<!-- Error processing HTML: ${errorData.error} -->\n${inputHtml}`)
       }
     } catch (error) {
       console.error('Error processing HTML:', error)
-      // For now, just show a placeholder
-      setOutputHtml('<!-- Processed HTML will appear here -->\n' + inputHtml)
+      setOutputHtml(`<!-- Error processing HTML: ${error.message} -->\n${inputHtml}`)
     }
   }
 
