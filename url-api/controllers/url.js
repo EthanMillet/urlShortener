@@ -94,5 +94,63 @@ module.exports = {
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
+  },
+
+  async processHtml(req, res, next) {
+    try {
+      const { html } = req.body;
+      if (!html) {
+        return res.status(400).json({ error: "HTML content is required" });
+      }
+
+      // Regex to find all URLs in HTML (href, src, and other attributes)
+      const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+      const urls = html.match(urlRegex) || [];
+      
+      // Remove duplicates
+      const uniqueUrls = [...new Set(urls)];
+      
+      // Create shortened URLs for each unique URL
+      const urlMappings = {};
+      const baseUrl = req.protocol + '://' + req.get('host');
+      
+      for (const originalUrl of uniqueUrls) {
+        try {
+          // Check if URL already exists
+          let existingUrl = await urls.findOne({ where: { original_url: originalUrl } });
+          
+          if (existingUrl) {
+            // Use existing short URL
+            urlMappings[originalUrl] = `${baseUrl}/api/url/redirect/${existingUrl.short_url}`;
+          } else {
+            // Create new shortened URL
+            const newUrl = await urls.create({ original_url: originalUrl });
+            const shortUrl = encodeBase62(newUrl.id);
+            await newUrl.update({ short_url: shortUrl });
+            urlMappings[originalUrl] = `${baseUrl}/api/url/redirect/${shortUrl}`;
+          }
+        } catch (error) {
+          console.error(`Error processing URL ${originalUrl}:`, error);
+          // Keep original URL if shortening fails
+          urlMappings[originalUrl] = originalUrl;
+        }
+      }
+
+      // Replace all URLs in the HTML with shortened versions
+      let processedHtml = html;
+      for (const [originalUrl, shortUrl] of Object.entries(urlMappings)) {
+        const escapedOriginalUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        processedHtml = processedHtml.replace(new RegExp(escapedOriginalUrl, 'g'), shortUrl);
+      }
+
+      res.status(200).json({
+        processedHtml,
+        originalUrlCount: uniqueUrls.length,
+        shortenedUrlCount: Object.keys(urlMappings).length,
+        urlMappings
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
 };
