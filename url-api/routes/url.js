@@ -6,5 +6,6 @@ router.get('/:id', urlController.getUrlsById);
 router.get('/', urlController.getUrls);
 router.post('/', urlController.createUrl);
 router.delete('/:id', urlController.deleteUrl);
+router.get('/redirect/:shortUrl', urlController.redirectUrl);
 
 module.exports = router;
