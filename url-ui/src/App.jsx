@@ -42,7 +42,7 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>HTML Processor</h1>
-        <p>Transform and optimize your HTML files with our powerful processing engine</p>
+        <p>Transform your HTML with ease</p>
       </header>
       
       <main className="main">
