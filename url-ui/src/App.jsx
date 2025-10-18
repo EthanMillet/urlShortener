@@ -1,9 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
 function App() {
   const [inputHtml, setInputHtml] = useState('')
   const [outputHtml, setOutputHtml] = useState('')
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check for saved theme preference or default to light mode
+    const savedTheme = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true)
+      document.documentElement.setAttribute('data-theme', 'dark')
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode
+    setIsDarkMode(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light')
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light')
+  }
 
   const handleProcess = async () => {
     if (!inputHtml.trim()) return
@@ -48,7 +67,16 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>URL Shortener</h1>
+        <div className="header-content">
+          <h1>URL Shortener</h1>
+          <button 
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+          >
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
       </header>
       
       <main className="main">
