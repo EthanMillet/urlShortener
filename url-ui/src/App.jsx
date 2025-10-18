@@ -26,8 +26,9 @@ function App() {
   }
 
   const extractUrls = (html) => {
-    // Regex to find all URLs in HTML (href, src, and other attributes)
-    const urlRegex = /(https?:\/\/[^\s<>"']+)/gi;
+    // More precise regex to find complete URLs, avoiding partial matches
+    // This regex looks for URLs that are complete (not part of other URLs)
+    const urlRegex = /(https?:\/\/[^\s<>"']+?)(?=\s|$|"|'|>|<|\)|,|;)/gi;
     const urls = html.match(urlRegex) || [];
     return [...new Set(urls)]; // Remove duplicates
   }
@@ -40,6 +41,7 @@ function App() {
     try {
       // Extract URLs on the frontend
       const urls = extractUrls(inputHtml)
+      console.log('Extracted URLs:', urls)
       
       if (urls.length === 0) {
         setOutputHtml(inputHtml)
@@ -76,8 +78,13 @@ function App() {
 
       // Replace all URLs in the HTML with shortened versions
       let processedHtml = inputHtml
+      console.log('URL Mappings:', urlMappings)
+      
       for (const [originalUrl, shortUrl] of Object.entries(urlMappings)) {
+        // Escape special regex characters in the original URL
         const escapedOriginalUrl = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        console.log(`Replacing: ${originalUrl} -> ${shortUrl}`)
+        // Use a simple global replace - this should work correctly since we're replacing exact matches
         processedHtml = processedHtml.replace(new RegExp(escapedOriginalUrl, 'g'), shortUrl)
       }
 
