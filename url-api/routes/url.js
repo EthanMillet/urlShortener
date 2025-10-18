@@ -6,3 +6,5 @@ router.get('/:id', urlController.getUrlsById);
 router.get('/', urlController.getUrls);
 router.post('/', urlController.createUrl);
 router.delete('/:id', urlController.deleteUrl);
+
+module.exports = router;
