@@ -48,8 +48,7 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>HTML Processor</h1>
-        <p>Transform your HTML with ease</p>
+        <h1>URL Shortener</h1>
       </header>
       
       <main className="main">
